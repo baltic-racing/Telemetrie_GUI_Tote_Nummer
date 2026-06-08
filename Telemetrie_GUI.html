@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Telemetrie des TY's vom Baltic Racing Team." />
+    <meta name="author" content="Egquus" />
+    <title>Telemetrie</title>
+
+    <style>
+        body {
+            background-color: rgb(0, 0, 0);
+            font-family: 'Times New Roman', Times, serif;
+            margin: 0;
+            padding-top: 70px;  /* Höhe des Headers */
+}
+
+        h1 {
+            color: rgb(255, 255, 255);
+            text-align: center;
+            margin: 0;
+        }
+
+        h2 {
+            color: rgb(255, 255, 255);
+            text-align: unset;
+        }
+
+        h3 {
+            color: rgb(255, 255, 255);
+            text-align: unset;
+        }
+
+        #header {
+            position: fixed;            /* Header bleibt oben */
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.9); /* halbtransparent */
+            color: white;
+            display: flex;
+            align-items: center;        /* vertikal zentrieren */
+            justify-content: center;    /* Titel zentrieren */
+            padding: 10px 5%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* optional */
+            z-index: 1000;
+        }
+
+        /* Logo links positionieren */
+        #header img {
+            position: center; /* aus dem normalen Fluss nehmen */
+            height: 50px;       /* feste Höhe, Breite automatisch */
+            width: auto;
+        }
+
+        /* Titel zentrieren, egal wie groß das Logo ist */
+        #header h1 {
+            margin: 0;
+            text-align: center;
+            flex: 1;           /* nimmt den verfügbaren Platz ein */
+        }
+
+
+        #statusline {
+            background-color: rgba(255, 255, 255, 0);
+            color: rgba(255, 255, 255, 0.637);
+            border: 2px solid rgba(255, 255, 255, 0.106);
+            padding: 5px 5%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #status-indicator {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        /* Gruppen (untereinander) */
+        #telemetrie {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 10px 5%;
+        }
+
+        /* Logo links in eigenem Container */
+        .logo-container {
+            position: absolute;
+            top: 10px;
+            left: 4.5%;
+        }
+
+        /* Jeder Gruppen-Rahmen */
+        .box_frame {
+            background: rgba(36, 31, 103, 0.03);
+            border: 2px solid rgb(50, 150, 50) /* LimeGreen */;/*border: 2px solid rgba(0, 100, 0, 0.6);*/
+            border-radius: 8px;
+            padding: 10px;
+            color: white;
+        }
+
+        /* Titel der Gruppe oben */
+        .box_frame > h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.1rem;
+        }
+
+        /* Container, der die data_box-Elemente nebeneinander anordnet */
+        .data_box_container {
+            display: flex;
+            flex-wrap: wrap;      /* auf kleinere Bildschirme umbrechen */
+            gap: 10px;
+            align-items: stretch;
+        }
+/*----------------------------------------------------------------------------------------*/
+/* Daten-Boxen: Flexibles Layout, damit sie sich an verschiedene Bildschirmgrößen anpassen */
+        /* Einzelne Boxen (Werte) */
+        .data_box {
+            background-color:  rgba(19, 86, 21, 0.381);
+            color: white;
+            border-radius: 6px;
+            padding: 8px;
+            min-width: 140px;            /* kleinste Breite */
+            flex: 1 1 160px;             /* wächst, kann schrumpfen, Basis 160px */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Name oben, Wert groß */
+        .data_box .key {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+
+        /* Name oben, Wert groß */
+        .data_box .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .data_box .value.stack-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1.45;
+            white-space: pre-line;
+            text-align: left;
+            width: 100%;
+        }
+
+        /* Missing Value */
+        .data_box.stale {
+            border-color: rgb(107, 5, 5);
+            opacity: 0.5;
+        }
+
+        .highlighted {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            background: rgba(255, 255, 255, 0.75);
+            border-style: outset;
+            border: 2px solid rgba(19, 86, 21, 0.381);
+            color: rgb(0, 0, 0);
+            font-size: 0.7rem;
+            padding: 3px 3px;
+            border-radius: 4px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .highlighted .icon {
+            width: 16px;
+            height: 16px;
+            display: block;
+        }
+
+        .data_box:hover .highlighted {
+            opacity: 1;
+            pointer-events: auto;
+            /*animation : fadeIn 0.3s ease-in-out forwards;*/
+        }
+
+/*----------------------------------------------------------------------------------------*/
+
+        .updated {
+            animation: blink 0.3s ease-in-out;
+        }
+
+        @keyframes blink {
+            0% { color: #8c00ff57; }
+            100% { color: white; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header" class="container">
+        <div class="logo-container">
+            <img src="/img/BRT_logo_schrift.png" alt="Logo" class="logo">
+        </div>
+        <h1>BRT - Telemetrie TY25</h1>
+    </div>
+
+    <div id="statusline" class="container">
+        <div><h3><b id="Latenz">Berechne Latenz...</b></h3></div>
+        <div>
+            <b id="Connection_status">Verbinde...</b>
+            <span id="status-indicator" style="background-color: gray;"></span>
+        </div>
+    </div>
+
+    <div id="telemetrie" class="container">
+        <h2 style="grid-column: 1 / -1;">Telemetrie</h2>
+    </div>
+
+    <div id="mode-select" style="margin: 10px;">
+        <select id="mode" onchange="setMode()">
+            <option value="tarvos">Tarvos III</option>
+            <option value="serial">Serielle Schnittstelle</option>
+        </select>
+        <button onclick="setMode()">Übernehmen</button>
+    </div>
+
+
+    <script type="module">
+        const telemetryContainer = document.getElementById("telemetrie");
+        const statusText = document.getElementById("Connection_status");
+        const statusDot = document.getElementById("status-indicator");
+        const boxes = {};
+        const groupContainers = {}; // Für Gruppen-Frames
+        const lastUpdateTimes = {};
+
+        const ID_MAP = await fetch("/id_map").then(res => res.json());
+
+        function getDisplayMeta(key) {
+            return ID_MAP[key] || {};
+        }
+
+        function getDisplayLabel(key) {
+            return getDisplayMeta(key).label || key;
+        }
+
+        function getDisplayIcon(key) {
+            return getDisplayMeta(key).icon || "default";
+        }
+
+
+        function formatTimeFromUnix(ts) {
+            if (!ts) return "-";
+            return new Date(ts * 1000).toLocaleTimeString();
+        }
+
+        function setMode() {
+            const mode = document.getElementById('mode').value;
+            fetch('/set_mode', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mode})
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Optional: Rückmeldung anzeigen
+                console.log(data);
+            });
+        }
+
+        document.getElementById('mode').addEventListener('change', setMode);
+        
+        function formatNumber(value, digits = 1) {
+            if (value === null || value === undefined) return "-";
+            return Number(value).toFixed(digits);
+        }
+
+        function formatStackValue(stack) {
+            const cellVoltages = Array.isArray(stack.cell_voltages_v) ? stack.cell_voltages_v : [];
+            const cellTemperatures = Array.isArray(stack.cell_temperatures_c) ? stack.cell_temperatures_c : [];
+
+            const voltageText = cellVoltages
+                .map((value, index) => `U${index + 1}: ${formatNumber(value, 3)} V`)
+                .join("\n");
+
+            const temperatureText = cellTemperatures
+                .map((value, index) => `T${index + 1}: ${formatNumber(value, 1)} °C`)
+                .join("\n");
+
+            return [
+                `Summe: ${formatNumber(stack.sum_voltage_v, 3)} V`,
+                `LTC: ${formatNumber(stack.ltc_temp_c, 1)} °C`,
+                voltageText,
+                temperatureText
+            ].filter(Boolean).join("\n");
+        }
+
+        function update_UI(data) {
+            for (const group in data) {
+                for (const key in data[group]) {
+                    const entry = data[group][key];
+
+                    if (group === "Stacks" && entry && typeof entry === "object" && !Array.isArray(entry)) {
+                        updateBox(group, key, formatStackValue(entry), entry.ts, true);
+                        continue;
+                    }
+
+                    updateBox(group, key, entry?.value, entry?.ts, false);
+                }
+            }
+        }
+
+        function ensureGroupContainer(group) {
+            if (!groupContainers[group]) {
+                const frame = document.createElement("div");
+                frame.className = "box_frame";
+
+                const title = document.createElement("h3");
+                title.textContent = group;
+                frame.appendChild(title);
+
+                const boxContainer = document.createElement("div");
+                boxContainer.className = "data_box_container";
+                frame.appendChild(boxContainer);
+
+                telemetryContainer.appendChild(frame);
+
+                groupContainers[group] = { frame, boxContainer };
+            }
+            return groupContainers[group].boxContainer;
+        }
+
+        function updateBox(group, key, value, ts, highlighted = false) {
+            const now = new Date();
+            const displayValue = value ?? "-";
+            lastUpdateTimes[key] = ts;  // ⚡ hier immer aktualisieren, wenn neue Daten da sind
+
+            const boxContainer = ensureGroupContainer(group);
+
+            // Box-Element finden
+            let boxEl = document.getElementById(`box-${key}`);
+
+            if (!boxEl) {
+                // Box neu erstellen
+                boxEl = document.createElement("div");
+                boxEl.className = "data_box";
+                boxEl.id = `box-${key}`;
+                boxEl.innerHTML = `
+                    <div class="highlighted">
+                        <img src="/icon/${getDisplayIcon(key)}.png" alt="Icon" class="icon">
+                    </div>
+                    <div class="key">${getDisplayLabel(key)}</div>
+                    <div class="value ${highlighted ? 'stack-value' : ''}" id="val-${key}">${displayValue}</div>
+                    <div id="ts-${key}" class="ts" style="font-size:0.75rem; margin-top:6px;">
+                        ${formatTimeFromUnix(ts)}
+                    </div>
+                `;
+                // Box anhängen
+                boxContainer.appendChild(boxEl);
+            } else {
+                // Wert updaten
+                const valEl = boxEl.querySelector(".value");
+                if (valEl && valEl.textContent !== String(displayValue)) {
+                    valEl.textContent = displayValue;
+                    valEl.classList.toggle("stack-value", highlighted);
+                    valEl.classList.add("updated");
+                    setTimeout(() => valEl.classList.remove("updated"), 300);
+                }
+                if (valEl && valEl.textContent === String(displayValue)) {
+                    valEl.classList.toggle("stack-value", highlighted);
+                }
+
+                // Zeitstempel updaten
+                const tsEl = boxEl.querySelector(".ts");
+                if (tsEl) tsEl.textContent = formatTimeFromUnix(ts);
+
+            }
+
+            // 🔴 stale-Klasse setzen
+            const ageMs = ts ? (now - ts * 1000) : Infinity;
+            const isStale = ageMs > 10000;
+            boxEl.classList.toggle("stale", isStale);
+        }
+
+        setInterval(() => {
+            const now = new Date();
+            for (const key in lastUpdateTimes) {
+                const ts = lastUpdateTimes[key];
+                const ageMs = ts ? (now - ts*1000) : Infinity;
+                const isStale = ageMs > 10000; // Timeout für getrennte Verbuindung mit Backend
+                const boxEl = document.getElementById(`box-${key}`);
+                if (boxEl) boxEl.classList.toggle("stale", isStale);
+            }
+        }, 500);
+
+
+        // Daten regelmäßig vom Server holen
+        async function fetch_data() {
+            try {
+                const r = await fetch('/data');
+                const data = await r.json();
+
+                const s = await fetch('/USB_status');
+                const status_data = await s.json();
+                const usb = status_data.USB_Status;
+
+                const a = await fetch('/Latenz');
+                const latenz = await a.json();
+
+                if (latenz.Latenz_ms !== undefined) {
+                    document.getElementById("Latenz").textContent = `Latenz: ${latenz.Latenz_ms} ms`;
+                } else {
+                    document.getElementById("Latenz").textContent = "Latenz: -";
+                }
+
+                if (usb === "Connected") {
+                    statusText.textContent = "USB Verbunden";
+                    statusDot.style.backgroundColor = "limegreen";
+                    console.log("USB connected");
+
+                    update_UI(data);
+                }
+                if (usb === "Disconnected") {
+                    statusText.textContent = "USB Getrennt";
+                    statusDot.style.backgroundColor = "red";
+                    console.log("USB disconnected");
+                }
+                
+                if (usb === "Connected with Pseudo-Serial") {
+                    statusText.textContent = "Verbunden mit Pseudo-Serial";
+                    statusDot.style.backgroundColor = "darkviolet";
+                    console.log("USB connected with Pseudo-Serial");
+
+                    update_UI(data);
+                }
+/*----------------------------------------------------------------------------------------*/
+
+            } catch (err) {
+                console.error("Fehler beim Abrufen:", err);
+                statusText.textContent = "Fehler bei der Kommunikation mit der API";
+                statusDot.style.backgroundColor = "orange";
+
+                // Zeige die letzte Aktualisierungszeit in jeder Box
+                for (const key in boxes) {
+                    const ts = document.getElementById(`ts-${key}`);
+                    if (ts && lastUpdateTimes[key]) {
+                        ts.textContent = "Letzte Aktualisierung: " + formatTime(lastUpdateTimes[key]);
+                        ts.style.color = "red";
+                    }
+                }
+            }
+        }
+
+        // 5x pro Sekunde aktualisieren (200 ms)
+        setInterval(fetch_data, 200);
+        fetch_data();
+    </script>
+</body>
+</html>

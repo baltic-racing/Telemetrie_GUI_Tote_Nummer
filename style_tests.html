@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="de">                                                            <!--Container der alles umfasst-->
+
+<head>                                                                      <!--Usichtbarer Kopfbereich - wichtige Meta-Infos (Hintergrundinfos für Browser)-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Telemetrie des TY's vom Baltic Racing Team.">
+    <meta name="author" content="Egquus">
+    <title>Telemetrie</title>
+
+    <style>
+        body{
+            background-color:white;
+            font-family:'Times New Roman', Times, serif;
+            margin:0;
+        }
+
+        h1{
+            background-color:black;
+            color:rgb(255, 255, 255);
+            text-align:center;
+            margin:0;
+            height: 80px;
+        }
+        
+        h3{
+            color:rgb(255, 255, 255);
+            text-align:unset;
+        }
+        
+        #header{
+            position: absolute;
+            top: 0px;
+            left: 0;
+            width: 100%;
+            font-size: 0.9em;
+            text-align: center;
+            color: #00ff80;
+        }
+
+        #statusline{
+            background-color: rgb(200, 200, 200);
+            color:rgba(0, 0, 0, 0.637);
+            text-align: left;
+            padding-top: 1px;
+            padding-bottom: 1px;
+            padding-left: 5%;
+
+            min-height: 20px;
+            margin-top: 80px;
+            margin-bottom: 10px;
+        }
+
+        #status-indicator {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        #clock {
+            width: 80px;
+            height: 15px;
+            border-radius: 20%;
+            display: inline-block;
+            
+            padding-left: 0%;
+
+            background-color: #111;
+            color: rgb(0, 183, 255);
+            filter: drop-shadow(5px 5px 2px rgba(0, 183, 255, 0.212));
+            
+            text-align: center;
+            border-radius: 5px;
+            padding: 10px;
+            position: relative;
+            left: 650px;
+        }
+
+        #telemetrie{
+            background-color: rgb(200, 200, 200);
+            color:rgba(0, 0, 0, 0.637);;
+            text-align: left;
+            padding-top: 1px;
+            padding-bottom: 1px;
+            padding-left: 5%;
+
+            min-height: 600px;
+            margin-bottom: 0px;
+
+            /* 🌟 Die Grid-Magie */
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* ← hier passiert die Magie */
+            gap: 10px;
+        }
+
+        #tech_data{
+            background-color: rgb(200, 200, 200);
+            color:rgba(0, 0, 0, 0.637);;
+            text-align: left;
+            padding-top: 1px;
+            padding-bottom: 1px;
+            padding-left: 5%;
+
+            min-height: 600px;
+            margin-bottom: 0px;
+        }
+
+        .data_box {
+            background-color: rgb(36, 31, 103);
+            color:white;
+            text-align: center;
+
+            margin-top:60px;
+            margin-bottom:500px;
+            margin-left: 0px;
+            
+            padding-top: 10px;
+            padding-bottom: 0px;
+            padding-left: 0px;
+
+            filter: drop-shadow(5px 5px 2px rgba(00, 00, 00, 0.35));
+            border-radius: 5px;
+            width: 90%;
+        }
+
+    </style>
+</head>
+
+<body>                                                                      <!--Sichtbarer Teil der Webseite-->
+    <div id="header" class="container">
+        <h1>BRT - Telemetrie TY25</h1>
+        <div id="clock"></div>
+    </div>
+
+    <div id="statusline" class="container">
+        <p>
+            <h3>Verbindungsstatus:</h3>
+            <b id="Connection_status"></b>
+        </p>
+    </div>
+
+    <div id="telemetrie" class="container">
+        <h2>Telemetrie</h2>
+    </div>
+
+    <div id="tech_data" class="container">
+        <h2>Technische Daten</h2>
+        <p> TSAC-Zellen: Sony VTC6</p>
+        <p> Stackanzahl: 12</p>
+        <p> Stackzellenanzahl: 11</p>
+        <p> Zellen pro Stackzelle: 5</p>
+    </div>
+</body>
+
+<script>                                                                    /*Logischer Teil der Webseite - Berchnungen und weiteres*/
+    
+    function updateClock() {
+      const now = new Date();
+      const time = now.toLocaleTimeString('de-DE', { hour12: false });
+      const ms = now.getMilliseconds().toString().padStart(3, '0');
+      document.getElementById("clock").textContent = `${time}.${ms}`;
+    }
+
+    // alle 1 ms aktualisieren
+    setInterval(updateClock, 1);
+    
+    
+    
+    let main_container = document.getElementById("telemetrie");
+
+    function create_data_box(telemetry_name, count = 2){
+            for (let i = 0; i < count; i++){
+                let box = document.createElement("div");
+                box.className = "data_box";
+                box.id = `data_box_${telemetry_name}_${i}`;
+
+                if(i == 1){
+                    box.innerHTML = `<pre id="output">Lade Daten...</pre>`;
+                }else{
+                    box.innerHTML = `${telemetry_name}:`;
+                }
+
+            main_container.appendChild(box); // WICHTIG: füge die Box ins DOM ein
+        }
+    }
+
+    function update_data_box(container_id){
+        let container = document.getElementById(`data_box_${telemetry_name}_${i}`);
+        
+        container.querySelector(".LV_Voltage")
+    }
+
+     // Erstellt oder aktualisiert Boxen
+    function update_UI(data) {
+        for (const key in data) {
+            const value = data[key];
+
+            // Wenn Box noch nicht existiert → erstellen
+            if (!boxes[key]) {
+                const box = document.createElement("div");
+                box.className = "data_box";
+                box.innerHTML = `<div>${key}</div><span class="value" id="val-${key}">${value.toFixed(2)}</span>`;
+                telemetryContainer.appendChild(box);
+                boxes[key] = document.getElementById(`val-${key}`);
+            } else {
+                // Wenn Box existiert → Wert animiert aktualisieren
+                const span = boxes[key];
+                if (span.textContent !== value.toFixed(2)) {
+                    span.textContent = value.toFixed(2);
+                    span.classList.add("updated");
+                    setTimeout(() => span.classList.remove("updated"), 500);
+                }
+            }
+        }
+    }
+
+    //Kommunikation mit dem Server/App - Daten welche über das Funkmodul kommen
+    async function fetch_data() {
+                    const r = await fetch('/data');
+                    const data = await r.json();
+                    document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+                    update_UI(data);
+                }
+    setInterval(fetch_data, 100);                                             //ruft alle 100 ms daten vom Senic-Server (Python) ab
+    fetch_data();                                                             //ruft einmalig sofort auf, damit die Daten sofort dargestellt werden
+
+    //Erstelle Boxen für Telemetriedaten
+    create_data_box("LV_Voltage");
+    create_data_box("APPS_1");
+
+    update_data_box(
+
+    )
+
+</script>
+
+</html>

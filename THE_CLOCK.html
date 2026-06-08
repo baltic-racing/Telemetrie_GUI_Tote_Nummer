@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Uhrzeit mit Millisekunden</title>
+  <style>
+    body {
+      font-family: monospace;
+      font-size: 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #111;
+      color: #0f0;
+    }
+  </style>
+</head>
+<body>
+  <div id="clock"></div>
+
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const date = now.toLocaleDateString('de-DE');
+      const time = now.toLocaleTimeString('de-DE', { hour12: false });
+      const ms = now.getMilliseconds().toString().padStart(3, '0');
+      document.getElementById("clock").textContent = `${date} ${time}.${ms}`;
+    }
+
+    // alle 1 ms aktualisieren
+    setInterval(updateClock, 1);
+  </script>
+</body>
+</html>

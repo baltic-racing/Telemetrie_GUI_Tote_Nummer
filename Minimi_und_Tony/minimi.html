@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Telemetrie des TY's vom Baltic Racing Team." />
+    <meta name="author" content="Egquus" />
+    <title>Telemetrie</title>
+
+    <style>
+        body {
+            background-color: rgb(40, 40, 40);
+            font-family: 'Times New Roman', Times, serif;
+            margin: 0;
+        }
+
+        h1 {
+            color: rgb(255, 255, 255);
+            text-align: center;
+            margin: 0;
+        }
+
+        h2 {
+            color: rgb(255, 255, 255);
+            text-align: unset;
+        }
+
+        h3 {
+            color: rgb(255, 255, 255);
+            text-align: unset;
+        }
+
+        #header {
+            background-color: rgb(30, 30, 30);
+            color: white;
+            text-align: center;
+            padding-top: 10px;
+            padding-bottom: 1px;
+            min-height: 50px;
+            margin-bottom: 10px;
+        }
+
+        #statusline {
+            background-color: rgb(200, 200, 200);
+            color: rgba(0, 0, 0, 0.637);
+            padding: 5px 5%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #status-indicator {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        /* Gruppen (untereinander) */
+        #telemetrie {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 10px 5%;
+        }
+
+        /* Jeder Gruppen-Rahmen */
+        .box_frame {
+            background: rgba(36, 31, 103, 0.03);
+            border: 2px solid rgba(0, 100, 0, 0.6);
+            border-radius: 8px;
+            padding: 10px;
+            color: white;
+        }
+
+        /* Titel der Gruppe oben */
+        .box_frame > h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.1rem;
+        }
+
+        /* Container, der die data_box-Elemente nebeneinander anordnet */
+        .data_box_container {
+            display: flex;
+            flex-wrap: wrap;      /* auf kleinere Bildschirme umbrechen */
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        /* Einzelne Boxen (Werte) */
+        .data_box {
+            background-color: rgb(36, 31, 103);
+            color: white;
+            border-radius: 6px;
+            padding: 8px;
+            min-width: 140px;            /* kleinste Breite */
+            flex: 1 1 160px;             /* wÃ¤chst, kann schrumpfen, Basis 160px */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Name oben, Wert groÃŸ */
+        .data_box .key {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+
+        .data_box .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+
+        .updated {
+            animation: blink 0.3s ease-in-out;
+        }
+
+        @keyframes blink {
+            0% { color: #8c00ff57; }
+            100% { color: white; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header" class="container">
+        <h1>BRT - Telemetrie TY25</h1>
+    </div>
+
+    <div id="statusline" class="container">
+        <div><h3>Verbindungsstatus:</h3></div>
+        <div>
+            <b id="Connection_status">Verbinde...</b>
+            <span id="status-indicator" style="background-color: gray;"></span>
+        </div>
+    </div>
+
+    <div style="margin: 15px;">
+    <button onclick="window.location.href='/Accumulator.html'">Accumulator öffnen</button>
+    </div>
+
+    <div id="telemetrie" class="container">
+        <h2 style="grid-column: 1 / -1;">Telemetrie</h2>
+        <div id="temp-box" class="box_frame" style="display:none;">
+            <h3>LTC Temperatur</h3>
+            <div class="data_box_container">
+                <div class="data_box">
+                    <div class="key">SLAVE_Tempreature</div>
+                    <div class="value" id="temp-value">-</div>
+                    <div id="temp-ts" style="font-size:0.75rem; color:#aaa; margin-top:6px;">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mode-select" style="margin: 10px;">
+        <label for="mode">Datenquelle:</label>
+        <select id="mode" onchange="setMode()">
+            <option value="tarvos">Tarvos III</option>
+            <option value="serial">Serielle Schnittstelle</option>
+        </select>
+        <button onclick="setMode()">Ãœbernehmen</button>
+    </div>
+
+    <div id="tech_data" class="container">
+        <h2>Technische Daten</h2>
+        <p>TSAC-Zellen: Sony VTC6</p>
+        <p>Stackanzahl: 12</p>
+        <p>Stackzellenanzahl: 11</p>
+        <p>Zellen pro Stackzelle: 5</p>
+    </div>
+
+    <script type="module">
+        const telemetryContainer = document.getElementById("telemetrie");
+        const statusText = document.getElementById("Connection_status");
+        const statusDot = document.getElementById("status-indicator");
+        const boxes = {};
+        const groupContainers = {}; // FÃ¼r Gruppen-Frames
+        const lastUpdateTimes = {};
+
+        const ID_MAP = await fetch("/id_map").then(res => res.json());
+
+        
+        function formatTime(date) {
+            if (!date) return "-";
+            return date.toLocaleTimeString();
+        }
+
+        function setMode() {
+            const mode = document.getElementById('mode').value;
+            fetch('/set_mode', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mode})
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Optional: RÃ¼ckmeldung anzeigen
+                console.log(data);
+            });
+        }
+
+        document.getElementById('mode').addEventListener('change', setMode);
+
+        function extractLatestTemperature(data) {
+            const candidates = [
+                ["BMS_Master", "LTC_Interne_Temperatur"],
+                ["TSAC", "SLAVE_Tempreature"],
+                ["Unknown_Group", "Unknown_ID_3"]
+            ];
+
+            for (const [group, key] of candidates) {
+                if (data[group] && data[group][key]) {
+                    const arr = data[group][key];
+                    if (Array.isArray(arr) && arr.length) return arr[arr.length - 1];
+                    if (arr !== undefined && arr !== null) return arr;
+                }
+            }
+            return null;
+        }
+
+        function updateTemperatureBox(data, now) {
+            const tempBox = document.getElementById("temp-box");
+            const tempValue = document.getElementById("temp-value");
+            const tempTs = document.getElementById("temp-ts");
+            const temp = extractLatestTemperature(data);
+
+            if (temp === null) {
+                tempBox.style.display = "none";
+                return;
+            }
+
+            tempBox.style.display = "block";
+            tempValue.textContent = `${temp} Â°C`;
+            tempTs.textContent = formatTime(now);
+        }
+        
+        function update_UI(data) {
+            const now = new Date();
+            updateTemperatureBox(data, now);
+
+            // Gruppe erstellen, falls noch nicht vorhanden
+            for (const group in data) {
+                if (!groupContainers[group]) {
+                    // neuen Gruppen-Frame anlegen
+                    const frame = document.createElement("div");
+                    frame.className = "box_frame";
+
+                    const title = document.createElement("h3");
+                    title.textContent = group;
+                    frame.appendChild(title);
+
+                    // Container fÃ¼r die nebeneinander liegenden Boxen
+                    const boxContainer = document.createElement("div");
+                    boxContainer.className = "data_box_container"; // NOTE: underscore, passt zu CSS
+                    frame.appendChild(boxContainer);
+
+                    telemetryContainer.appendChild(frame);
+
+                    groupContainers[group] = { frame, boxContainer };
+                }
+
+                const { boxContainer } = groupContainers[group];
+
+                // FÃ¼r jede Variable in der Gruppe
+                for (const key in data[group]) {
+                    const valueArray = data[group][key];
+                    const latestValue = Array.isArray(valueArray)
+                        ? (valueArray.length ? valueArray[valueArray.length - 1] : null)
+                        : valueArray;
+                    const displayValue = latestValue ?? "-";
+
+                    // Box neu erstellen, falls nicht vorhanden
+                    if (!boxes[key]) {
+                        const box = document.createElement("div");
+                        box.className = "data_box";
+                        box.innerHTML = `
+                            <div class="key">${key}</div>
+                            <div class="value" id="val-${key}">${displayValue}</div>
+                            <div id="ts-${key}" style="font-size:0.75rem; color:#aaa; margin-top:6px;">${formatTime(now)}</div>
+                        `;
+                        boxContainer.appendChild(box);
+                        boxes[key] = document.getElementById(`val-${key}`);
+                    } else {
+                        // existierende Box updaten
+                        const span = boxes[key];
+                        if (span && span.textContent !== String(displayValue)) {
+                            span.textContent = displayValue;
+                            span.classList.add("updated");
+                            setTimeout(() => span.classList.remove("updated"), 300);
+                        }
+                        // Zeit aktualisieren
+                        const ts = document.getElementById(`ts-${key}`);
+                        if (ts) ts.textContent = formatTime(now);
+                    }
+                }
+            }
+        }
+
+
+        // Daten regelmÃ¤ÃŸig vom Server holen
+        async function fetch_data() {
+            try {
+                const r = await fetch('/data');
+                const data = await r.json();
+
+                const s = await fetch('/USB_status');
+                const status_data = await s.json();
+                const usb = status_data.USB_Status;
+
+                if (usb === "Connected") {
+                    statusText.textContent = "USB Verbunden";
+                    statusDot.style.backgroundColor = "limegreen";
+                    console.log("USB connected");
+                }
+                if (usb === "Disconnected") {
+                    statusText.textContent = "USB Getrennt";
+                    statusDot.style.backgroundColor = "red";
+                    console.log("USB disconnected");
+                }
+                if (data && Object.keys(data).length > 0) {
+                    update_UI(data);
+                }
+/*----------------------------------------------------------------------------------------*/
+
+            } catch (err) {
+                console.error("Fehler beim Abrufen:", err);
+                statusText.textContent = "Fehler bei der Kommunikation mit der API";
+                statusDot.style.backgroundColor = "yellow";
+
+                // Zeige die letzte Aktualisierungszeit in jeder Box
+                for (const key in boxes) {
+                    const ts = document.getElementById(`ts-${key}`);
+                    if (ts && lastUpdateTimes[key]) {
+                        ts.textContent = "Letzte Aktualisierung: " + formatTime(lastUpdateTimes[key]);
+                        ts.style.color = "red";
+                    }
+                }
+            }
+        }
+
+        // 2x pro Sekunde aktualisieren (500 ms)
+        setInterval(fetch_data, 500);
+        fetch_data();
+    </script>
+</body>
+</html>
