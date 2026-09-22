@@ -13,6 +13,7 @@ from sanic.response import json, html, file, text
 
 app = Sanic("TY_Interface")
 
+
 CMD_STX = 0x02
 CMD_ETX = 0x55
 telemetry_data = {}
